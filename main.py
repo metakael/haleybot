@@ -63,7 +63,7 @@ async def handle_callback_query(update, context):
             [InlineKeyboardButton("Sign up for a programme", callback_data='signup')],
             [InlineKeyboardButton("Profile", callback_data='profile')],
             [InlineKeyboardButton("Manage Sign Ups", callback_data='myprog')],
-            [InlineKeyboardButton("Help", callback_data='help')],
+            [InlineKeyboardButton("About Haley", callback_data='about')],
         ]
         reply_markup1 = InlineKeyboardMarkup(keyboard)
         await query.edit_message_reply_markup(reply_markup=None)
@@ -101,6 +101,9 @@ async def handle_callback_query(update, context):
     elif data == 'complete_programme':
         # To complete the programme
         await complete_prog(update, context)
+    elif data == 'about':
+        # General about text
+        await about_bot(update, context)
 
 
 # COMMANDS
@@ -239,6 +242,21 @@ async def view_personal_profile(update, context):
                 connection.close()
     else:
         await context.bot.send_message(chat_id=chat_id, text="Failed to connect")
+
+
+async def about_bot(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    chat_id = query.from_user.id
+
+    # Check if the command is used in a private chat
+    if query.message.chat.type != 'private':
+        await context.bot.send_message(chat_id=chat_id, text="This command can only be used in private messages.")
+        return
+
+    await query.edit_message_reply_markup(reply_markup=None)
+    await context.bot.send_message(chat_id=chat_id, text="Haley is a bot programmed by Halogen to allow Associates to view and manage programme signups. Ask your friends to join us in this impactful work! https://halogen.sg/halogenplus-volunteer/")
 
 
 # CONVERSATION 1 - REGISTER FOR ACCOUNT - FIRST_NAME TO LOCKREG
