@@ -4,11 +4,12 @@ import os
 import mysql.connector
 from dotenv import load_dotenv
 from mysql.connector import Error
-from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, CallbackQueryHandler, CallbackContext, filters
+from telegram.ext import (Application, CommandHandler, MessageHandler, ConversationHandler, CallbackQueryHandler,
+                          CallbackContext, filters)
 from datetime import datetime, timedelta
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Bot
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Bot, ReplyKeyboardMarkup
 
-# Should be saved at 110124 1035h
+# Third commit
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -122,9 +123,11 @@ async def start(update, context):
                 'Please register for an account to continue. You will need your MOE IRS email handy so get that ready!',
                 reply_markup=reply_markup)
         else:
-            await update.message.reply_text("Sorry but I can only help Halogen Associates! Join us first? Head to https://halogen.sg/halogenplus-volunteer/ to sign up!")
+            await update.message.reply_text("Sorry but I can only help Halogen Associates! Join us first? Head to"
+                                            "https://halogen.sg/halogenplus-volunteer/ to sign up!")
     except Error:
-        await update.message.reply_text("Sorry there was an error! Are you already a Halogen Associate? If so try again, if not you can head to https://halogen.sg/halogenplus-volunteer/ to sign up!")
+        await update.message.reply_text("Sorry there was an error! Are you already a Halogen Associate? If so try again"
+                                        ", if not you can go to https://halogen.sg/halogenplus-volunteer/ to sign up!")
 
 
 async def manager_home(update, context):
@@ -136,7 +139,12 @@ async def manager_home(update, context):
         await update.message.reply_text("Er no...maybe ask Tim to add you?")
         return
 
-    keyboard = [
+    reply_keyboard = [
+        ["Head Trainer Options"],
+    ]
+    ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False)
+
+    inl_keyboard = [
         [InlineKeyboardButton("Add a new programme", callback_data='add_prog')],
         [InlineKeyboardButton("View applications", callback_data='view_app')],
         [InlineKeyboardButton("Accept applicants", callback_data='accept_app')],
@@ -144,8 +152,34 @@ async def manager_home(update, context):
         [InlineKeyboardButton("View Programme ID", callback_data='view_prog_id')],
         [InlineKeyboardButton("Mark Programme as Complete", callback_data='complete_programme')],
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(chat_id=chat_id, text="Cool! Here are your admin options.", reply_markup=reply_markup)
+    reply_markup = InlineKeyboardMarkup(inl_keyboard)
+    await context.bot.send_message(chat_id=chat_id,
+                                   text="Here are your Head Trainer options! You can also click the button anytime to"
+                                        " pull these up.",
+                                   reply_markup=reply_markup)
+
+
+async def head_trainer_options(update, context):
+    user_id = update.message.from_user.id
+    chat_id = update.message.chat_id
+
+    # Verify if the user is a manager
+    if not is_user_manager(user_id):
+        await update.message.reply_text("You're not a Head Trainer!")
+        return
+
+    inl_keyboard = [
+        [InlineKeyboardButton("Add a new programme", callback_data='add_prog')],
+        [InlineKeyboardButton("View applications", callback_data='view_app')],
+        [InlineKeyboardButton("Accept applicants", callback_data='accept_app')],
+        [InlineKeyboardButton("Reject applicants", callback_data='reject_app')],
+        [InlineKeyboardButton("View Programme ID", callback_data='view_prog_id')],
+        [InlineKeyboardButton("Mark Programme as Complete", callback_data='complete_programme')],
+    ]
+    reply_markup = InlineKeyboardMarkup(inl_keyboard)
+    await context.bot.send_message(chat_id=chat_id,
+                                   text="Here are your Head Trainer options!",
+                                   reply_markup=reply_markup)
 
 
 async def set_user_role(update, context):
@@ -231,7 +265,9 @@ async def view_personal_profile(update, context):
                 [InlineKeyboardButton("Go to Main Page", callback_data='home')]
             ]
             reply_markup1 = InlineKeyboardMarkup(keyboard)
-            await context.bot.send_message(chat_id=chat_id, text="If you need to edit any of these details, please approach the Halogen team.", reply_markup=reply_markup1)
+            await context.bot.send_message(
+                chat_id=chat_id, text="If you need to edit any of these details, please approach the Halogen team.",
+                reply_markup=reply_markup1)
             return
 
         except Error as e:
@@ -257,7 +293,10 @@ async def about_bot(update, context):
         return
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=chat_id, text="Haley is a bot programmed by Halogen to allow Associates to view and manage programme signups. Ask your friends to join us in this impactful work! https://halogen.sg/halogenplus-volunteer/")
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="Haley is a bot programmed by Halogen to allow Associates to view and manage programme signups. Ask your"
+             " friends to join us in this impactful work! https://halogen.sg/halogenplus-volunteer/")
 
 
 # CONVERSATION 1 - REGISTER FOR ACCOUNT - FIRST_NAME TO LOCKREG
@@ -268,7 +307,8 @@ async def register(update, context):
     # Check if the command is used in a private chat
     if query.message.chat.type != 'private':
         await query.edit_message_reply_markup(reply_markup=None)
-        await context.bot.send_message(chat_id=query.message.chat_id, text="This command can only be used in private messages.")
+        await context.bot.send_message(chat_id=query.message.chat_id, text="This command can only be used in private"
+                                                                           " messages.")
         return ConversationHandler.END
 
     tele_id = update.callback_query.from_user.id
@@ -337,7 +377,8 @@ async def photo_handler(update, context):
     file = await context.bot.get_file(photo.file_id)
     photo_binary = await file.download_as_bytearray()
     context.user_data['photo'] = photo_binary
-    await update.message.reply_text("Looking good! Now we will need your NRIC number in full to verify against the MOE IRS records. Don't worry, I'll keep it safe. ;)")
+    await update.message.reply_text("Looking good! Now we will need your NRIC number in full to verify against the MOE"
+                                    " IRS records. Don't worry, I'll keep it safe.")
     return NRIC_NUMBER
 
 
@@ -350,7 +391,9 @@ async def nric_number_handler(update, context):
     # Check if the entered NRIC matches the pattern
     if re.match(pattern1, user_nric_number):
         context.user_data['nric_number'] = user_nric_number
-        await update.message.reply_text('What is the expiry date (DDMMYY) of your MOE IRS confirmation? You can search for sender@rems.moe.edu.sg to find the email. If you are not registered with MOE IRS, key in 010101')
+        await update.message.reply_text('What is the expiry date (DDMMYY) of your MOE IRS confirmation? You can search'
+                                        ' for sender@rems.moe.edu.sg to find the email. If you are not registered with'
+                                        ' MOE IRS, key in 010101')
         return MOE_IRS
     else:
         await update.message.reply_text('Invalid NRIC format. Please enter a valid NRIC number.')
@@ -432,7 +475,8 @@ async def postal_handler(update, context):
         [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
     ]
     reply_markup1 = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Please review your personal details:\n" + biodata_summary, reply_markup=reply_markup1)
+    await update.message.reply_text("Please review your personal details:\n" + biodata_summary,
+                                    reply_markup=reply_markup1)
 
     return LOCKREG  # Which either goes to handle_reg_confirm or handle_reg_cancel
 
@@ -448,7 +492,8 @@ async def handle_reg_confirm(update, context):
     ]
     reply_markup1 = InlineKeyboardMarkup(keyboard)
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Registration complete! You can head to the main page now.", reply_markup=reply_markup1)
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Registration complete! You can head to the main"
+                                                                       " page now.", reply_markup=reply_markup1)
 
     # Clear all existing data from context.user_data
     context.user_data.clear()
@@ -465,7 +510,8 @@ async def handle_reg_cancel(update, context):
     ]
     reply_markup1 = InlineKeyboardMarkup(keyboard)
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Sorry that you cancelled! Can we start over?", reply_markup=reply_markup1)
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Sorry that you cancelled! Can we start over?",
+                                   reply_markup=reply_markup1)
 
     # Clear all existing data from context.user_data
     context.user_data.clear()
@@ -481,11 +527,12 @@ def store_new_user(user_data):
         try:
             cursor = connection.cursor()
             insert_query = """
-                            INSERT INTO users (first_name, last_name, date_of_birth, photo, nric_number, moe_irs, mobile, postal, account_type, training_hours, telegram_id, telegram_handle)
+                            INSERT INTO users (first_name, last_name, date_of_birth, photo, nric_number, moe_irs,
+                             mobile, postal, account_type, training_hours, telegram_id, telegram_handle)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
-            user_values = (user_data['first_name'], user_data['last_name'], user_data['date_of_birth'], user_data['photo'],
-                           user_data['nric_number'], user_data['moe_irs'], user_data['mobile'],
+            user_values = (user_data['first_name'], user_data['last_name'], user_data['date_of_birth'],
+                           user_data['photo'], user_data['nric_number'], user_data['moe_irs'], user_data['mobile'],
                            user_data['postal'], 'standard', '0.00', user_data['telegram_id'],
                            user_data['telegram_username'])
             cursor.execute(insert_query, user_values)
@@ -520,7 +567,8 @@ async def start_addprog(update, context):
         return ConversationHandler.END
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the school name in full: eg. Halogen Secondary School")
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the school name in full: eg."
+                                                                       " Halogen Secondary School")
     return SCHOOL
 
 
@@ -640,7 +688,8 @@ async def handle_prog_confirm(update, context):
         [InlineKeyboardButton("View Programme ID", callback_data='view_prog_id')],
     ]
     reply_markup1 = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Programme added successfully.", reply_markup=reply_markup1)
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Programme added successfully.",
+                                   reply_markup=reply_markup1)
 
     # Clear all existing data from context.user_data
     context.user_data.clear()
@@ -653,7 +702,8 @@ async def handle_prog_cancel(update, context):
     await query.answer()
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Sorry something went wrong! Add a programme again under manager options.")
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Sorry something went wrong! Add a programme"
+                                                                       " again under manager options.")
 
     # Clear all existing data from context.user_data
     context.user_data.clear()
@@ -668,7 +718,8 @@ def store_programme_data(data):
         try:
             cursor = connection.cursor()
             insert_query = """
-            INSERT INTO jobs (uploader, chat_id, school, prog_date, start_time, hours, student_level, trainers_needed, job_status, programme_name)
+            INSERT INTO jobs (uploader, chat_id, school, prog_date, start_time, hours, student_level, trainers_needed,
+             job_status, programme_name)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             cursor.execute(insert_query, (data['telegram_id'], data['chat_id'], data['school'],
@@ -731,11 +782,14 @@ async def list_jobs(update, context):
     # Check if the command is used in a private chat
     if query.message.chat.type != 'private':
         await query.edit_message_reply_markup(reply_markup=None)
-        await context.bot.send_message(chat_id=query.message.chat_id, text="You can only do this in a direct message with Haley.")
+        await context.bot.send_message(chat_id=query.message.chat_id, text="You can only do this in a direct message"
+                                                                           " with Haley.")
         return ConversationHandler.END
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="I can show you all programmes within a 7-day period. Please let me know what is the first day to list from in DDMMYY format..")
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text="I can show you all programmes within a 7-day period. Please let me know what"
+                                        " is the first day to list from in DDMMYY format..")
     return SELECT_DATE
 
 
@@ -788,8 +842,12 @@ def fetch_jobs(start_date, end_date):
             message_fetch_jobs = f"Programmes from {formatted_start_date} to {formatted_end_date}:\n\n"
             for job in jobs:
                 # Check if job[4] is a timedelta object and format it
-                formatted_time_b = (datetime.min + job[4]).strftime('%I:%M %p') if isinstance(job[4], timedelta) else str(job[4])
-                message_fetch_jobs += f"ID Number: {job[0]}\n\t• Programme: {job[1]}\n\t• School: {job[2]}\n\t• Date: {job[3].strftime('%d %b %y')}\n\t• Time: {formatted_time_b}\n\t• Hours: {job[5]}\n\n"
+                formatted_time_b = (datetime.min + job[4]).strftime('%I:%M %p') \
+                    if isinstance(job[4], timedelta) \
+                    else str(job[4])
+                message_fetch_jobs += (f"ID Number: {job[0]}\n\t• Programme: {job[1]}\n\t• School: {job[2]}\n\t• Date:"
+                                       f" {job[3].strftime('%d %b %y')}\n\t• Time: {formatted_time_b}\n\t• Hours:"
+                                       f" {job[5]}\n\n")
             return message_fetch_jobs
 
         except Error as e:
@@ -816,7 +874,8 @@ async def apply_job_handler(update, context):
         return ConversationHandler.END
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the ID Number of the programme you wish to sign up for.")
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the ID Number of the programme"
+                                                                       " you wish to sign up for.")
     return APPLY_JOB
 
 
@@ -832,7 +891,8 @@ async def apply_job(update, context):
     message_job_check = fetch_one_job(session_id)
     await update.message.reply_text("Please confirm that this is the programme you are signing up for")
     await update.message.reply_text(message_job_check)
-    await update.message.reply_text("If this is correct, please enter the ID Number again. If not, /cancel and start over.")
+    await update.message.reply_text("If this is correct, please enter the ID Number again. If not, /cancel and start"
+                                    " over.")
     context.user_data['app_session_id'] = session_id
     return CONFIRM_APPLY
 
@@ -874,8 +934,11 @@ def fetch_one_job(session_id):
                 return "No programme found with the provided Session ID."
             programme, school, prog_date, start_time, hours = job
             # Check if job[4] is a timedelta object and format it
-            formatted_time_c = (datetime.min + start_time).strftime('%I:%M %p') if isinstance(start_time, timedelta) else str(start_time)
-            message_fetch_job = f"Programme: {programme}\nSchool: {school}\nDate: {prog_date.strftime('%d-%m-%y')}\nTime: {formatted_time_c}\nHours: {hours}\n"
+            formatted_time_c = (datetime.min + start_time).strftime('%I:%M %p') \
+                if isinstance(start_time, timedelta) \
+                else str(start_time)
+            message_fetch_job = (f"Programme: {programme}\nSchool: {school}\nDate:"
+                                 f" {prog_date.strftime('%d-%m-%y')}\nTime: {formatted_time_c}\nHours: {hours}\n")
             return message_fetch_job
         except Error as e:
             return "Error retrieving programme details.", e
@@ -912,7 +975,8 @@ async def confirm_apply(update, context):
         [InlineKeyboardButton("No", callback_data='cancel_another')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Sign up successfully sent. Would you like to sign up for another?", reply_markup=reply_markup)
+    await update.message.reply_text("Sign up successfully sent. Would you like to sign up for another?",
+                                    reply_markup=reply_markup)
     return ANOTHER_JOB
 
 
@@ -951,7 +1015,8 @@ def insert_app(telegram_id, session_id):
             cursor = connection.cursor()
             cursor.execute("SET time_zone = '+08:00';")
             insert_query = """
-                INSERT INTO applications (uid, telegram_id, session_id, chat_id, first_name, last_name, mobile, postal, programme_name, school, prog_date, start_time, hours, student_level, app_status, apply_time)
+                INSERT INTO applications (uid, telegram_id, session_id, chat_id, first_name, last_name, mobile, postal,
+                 programme_name, school, prog_date, start_time, hours, student_level, app_status, apply_time)
                 SELECT 
                     u.uid, 
                     u.telegram_id, 
@@ -992,7 +1057,8 @@ async def handle_another_confirm(update, context):
     await query.answer()
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the ID number of the Programme you wish to sign up for.")
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text="Please enter the ID number of the Programme you wish to sign up for.")
 
     # Clear all existing data from context.user_data
     context.user_data.clear()
@@ -1037,7 +1103,9 @@ async def view_applications(update, context):
         [InlineKeyboardButton("Reject applicants", callback_data='reject_app')],
     ]
     reply_markup1 = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Click on either option to accept or reject associates.", reply_markup=reply_markup1)
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text="Click on either option to accept or reject associates.",
+                                   reply_markup=reply_markup1)
     return ACCEPT_OR_REJECT
 
 
@@ -1096,7 +1164,8 @@ async def app_accept_button(update, context):
     context.user_data['chat_id'] = query.message.chat_id
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the UIDs of the associates you want to accept. (eg. 23, 45, 67)")
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the UIDs of the associates you"
+                                                                       " want to accept. (eg. 23, 45, 67)")
     return PROCESS_ACCEPT
 
 
@@ -1196,8 +1265,12 @@ async def update_accept_application(bot, chat_id, uid):
                     join_link = "Unavailable"
 
                 # Send a direct message
-                formatted_time_f = (datetime.min + start_time).strftime('%I:%M %p') if isinstance(start_time, timedelta) else str(start_time)
-                message = f"Good news! You have been confirmed for {programme_name} at {school} on {prog_date.strftime('%d-%m-%y')} starting at {formatted_time_f} for {hours} hours. Please click the link to join the programme chat group:\n{join_link}"
+                formatted_time_f = (datetime.min + start_time).strftime('%I:%M %p') \
+                    if isinstance(start_time, timedelta) \
+                    else str(start_time)
+                message = (f"Good news! You have been confirmed for {programme_name} at {school} on"
+                           f" {prog_date.strftime('%d-%m-%y')} starting at {formatted_time_f} for {hours} hours."
+                           f" Please click the link to join the programme chat group:\n{join_link}")
                 await bot.send_message(chat_id=telegram_id, text=message)
             else:
                 logging.warning("No matching record found")
@@ -1233,7 +1306,8 @@ async def app_reject_button(update, context):
     context.user_data['chat_id'] = query.message.chat_id
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Please enter the UIDs of the associates you want to reject. (eg. 23, 45, 67)")
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text="Please enter the UIDs of the associates you want to reject. (eg. 23, 45, 67)")
     return PROCESS_REJECT
 
 
@@ -1300,8 +1374,12 @@ def update_reject_application(bot, chat_id, uid):
                 programme_name, school, prog_date, start_time, telegram_id = result
 
                 # Send a direct message
-                formatted_time_e = (datetime.min + start_time).strftime('%I:%M %p') if isinstance(start_time, timedelta) else str(start_time)
-                message = f"Hello! For {programme_name} at {school} on {prog_date.strftime('%d-%m-%y')} starting at {formatted_time_e}, the programme is full and you will not be involved. Thanks for signing up and I hope we get to do the next one!"
+                formatted_time_e = (datetime.min + start_time).strftime('%I:%M %p') \
+                    if isinstance(start_time, timedelta) \
+                    else str(start_time)
+                message = (f"Hello! For {programme_name} at {school} on {prog_date.strftime('%d-%m-%y')} starting at"
+                           f" {formatted_time_e}, the programme is full and you will not be involved. Thanks for"
+                           f" signing up and I hope we get to do the next one!")
                 bot.send_message(chat_id=telegram_id, text=message)
             else:
                 logging.warning("No matching record found")
@@ -1362,8 +1440,12 @@ def fetch_user_applications(user_id):
             applications_info = "Your Programmes:\n\n"
             for app in applications:
                 session_id, programme_name, school, prog_date, start_time, hours, app_status = app
-                formatted_time_d = (datetime.min + start_time).strftime('%I:%M %p') if isinstance(start_time, timedelta) else str(start_time)
-                applications_info += f"ID Number: {session_id}\n\t• Programme: {programme_name}\n\t• School: {school}\n\t• Date: {prog_date.strftime('%d-%m-%y')}\n\t• Time: {formatted_time_d}\n\t• Hours: {hours}\n\t• Status: {app_status}\n\n"
+                formatted_time_d = (datetime.min + start_time).strftime('%I:%M %p') \
+                    if isinstance(start_time, timedelta) \
+                    else str(start_time)
+                applications_info += (f"ID Number: {session_id}\n\t• Programme: {programme_name}\n\t• School:"
+                                      f" {school}\n\t• Date: {prog_date.strftime('%d-%m-%y')}\n\t• Time:"
+                                      f" {formatted_time_d}\n\t• Hours: {hours}\n\t• Status: {app_status}\n\n")
             return applications_info
 
         except mysql.connector.Error as e:
@@ -1413,7 +1495,8 @@ async def handle_cfm_withdraw(update, context):
     await query.answer()
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Sigh okay - what is the Programme ID of the session you want to withdraw from?")
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Sigh okay - what is the Programme ID of the"
+                                                                       " session you want to withdraw from?")
     return ENTER_PROGRAMME_ID
 
 
@@ -1430,7 +1513,8 @@ async def handle_walau(update, context):
     ]
     reply_markup1 = InlineKeyboardMarkup(keyboard)
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Wah don't liddat play leh", reply_markup=reply_markup1)
+    await context.bot.send_message(chat_id=query.message.chat_id, text="Wah don't liddat play leh",
+                                   reply_markup=reply_markup1)
     return ConversationHandler.END
 
 
@@ -1442,7 +1526,8 @@ async def withdrawing_app(update, context):
     message_app_check = fetch_one_app(session_id, user_id)
     await update.message.reply_text("Please confirm that this is the programme you are withdrawing from.")
     await update.message.reply_text(message_app_check)
-    await update.message.reply_text("If this is correct, please enter the ID Number again. If not, /cancel and start over.")
+    await update.message.reply_text("If this is correct, please enter the ID Number again. If not, /cancel and"
+                                    " start over.")
     context.user_data['wd_session_id'] = session_id
     return CONFIRM_WITHDRAWAL
 
@@ -1464,8 +1549,11 @@ def fetch_one_app(session_id, user_id):
                 return "Ah wait there is no signup with this ID though."
             programme, school, prog_date, start_time, hours = job
             # Check if job[4] is a timedelta object and format it
-            formatted_time_g = (datetime.min + start_time).strftime('%I:%M %p') if isinstance(start_time, timedelta) else str(start_time)
-            message_fetch_job = f"Programme: {programme}\nSchool: {school}\nDate: {prog_date.strftime('%d-%m-%y')}\nTime: {formatted_time_g}\nHours: {hours}\n"
+            formatted_time_g = (datetime.min + start_time).strftime('%I:%M %p') \
+                if isinstance(start_time, timedelta) \
+                else str(start_time)
+            message_fetch_job = (f"Programme: {programme}\nSchool: {school}\nDate:"
+                                 f" {prog_date.strftime('%d-%m-%y')}\nTime: {formatted_time_g}\nHours: {hours}\n")
             return message_fetch_job
         except Error as e:
             return "Error retrieving programme details.", e
@@ -1508,7 +1596,11 @@ async def withdraw_application_accepted(session_id, telegram_id):
             cursor = connection.cursor()
 
             # Check if there is an accepted application first
-            select_query = "SELECT session_id FROM applications WHERE session_id = %s AND telegram_id = %s AND app_status = 'accepted'"
+            select_query = """
+            SELECT session_id 
+            FROM applications 
+            WHERE session_id = %s AND telegram_id = %s AND app_status = 'accepted'
+            """
             cursor.execute(select_query, (session_id, telegram_id))
             temp_sesh_id_result = cursor.fetchone()
 
@@ -1529,7 +1621,10 @@ async def withdraw_application_accepted(session_id, telegram_id):
                 temp_sesh_id = temp_sesh_id_result[0]
 
                 # Select the chat_id from the session_id
-                select_query = "SELECT chat_id, first_name, last_name, uid FROM applications WHERE session_id = %s AND telegram_id = %s"
+                select_query = """
+                SELECT chat_id, first_name, last_name, uid 
+                FROM applications WHERE session_id = %s AND telegram_id = %s
+                """
                 cursor.execute(select_query, (temp_sesh_id, telegram_id))
                 temp_results = cursor.fetchone()
 
@@ -1537,7 +1632,8 @@ async def withdraw_application_accepted(session_id, telegram_id):
 
                 # Send a message into chat
                 temp_chat_id = chat_id
-                message = f"Bad news, someone dropped out: {first_name} {last_name} (ID: {uid}). Applications open again."
+                message = (f"Bad news, someone dropped out: {first_name} {last_name} (ID: {uid}). Applications"
+                           f" open again.")
                 await bot.send_message(chat_id=temp_chat_id, text=message)
 
                 return "Application withdrawn and trainers_needed updated."
@@ -1619,7 +1715,8 @@ async def complete_prog(update, context):
     reply_markup1 = InlineKeyboardMarkup(keyboard)
     await query.edit_message_reply_markup(reply_markup=None)
     await context.bot.send_message(chat_id=query.message.chat_id,
-                                   text="Is this programme finished? By completing the programme you will lock in all trainers, payments, and hours.",
+                                   text="Is this programme finished? By completing the programme you will lock in all"
+                                        " trainers, payments, and hours.",
                                    reply_markup=reply_markup1)
     return COMPLETE_OR_CANCEL
 
@@ -1632,7 +1729,9 @@ async def yes_complete_handle(update, context):
     message_trainer_check = fetch_trainers(chat_id)
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="Okay! Great job team! Let me confirm: Which of these persons were NOT in the programme? (Enter their ID numbers; 0 if none)")
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text="Okay! Great job team! Let me confirm: Which of these persons were NOT in the"
+                                        " programme? (Enter their ID numbers; 0 if none)")
     await context.bot.send_message(chat_id=query.message.chat_id, text=message_trainer_check)
     return ANY_REMOVALS
 
@@ -1703,7 +1802,8 @@ async def trainer_removals(update, context):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await context.bot.send_message(chat_id=chat_id,
-                                           text="Confirm that the trainer list is correct? If so confirm, if not start over.",
+                                           text="Confirm that the trainer list is correct? If so confirm, if not"
+                                                " start over.",
                                            reply_markup=reply_markup)
             return CONFIRM_ALL_PROG_DEETS
 
@@ -1726,7 +1826,8 @@ async def trainer_removals(update, context):
         [InlineKeyboardButton("Made an oops, need to do again", callback_data='start_over')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(chat_id=chat_id, text="All correct? If so confirm, if not start over.", reply_markup=reply_markup)
+    await context.bot.send_message(chat_id=chat_id, text="All correct? If so confirm, if not start over.",
+                                   reply_markup=reply_markup)
     return CONFIRM_ALL_PROG_DEETS
 
 
@@ -1758,7 +1859,8 @@ async def completion_confirm_button(update, context):
     update_job_status(chat_id)
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await context.bot.send_message(chat_id=query.message.chat_id, text="All done! Training hours updated and programme closed.")
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text="All done! Training hours updated and programme closed.")
     return ConversationHandler.END
 
 
@@ -1843,11 +1945,25 @@ async def start_over_complete(update, context):
 
 # DM default message
 async def default_response(update, context):
-    keyboard = [
-        [InlineKeyboardButton("Show me", callback_data='home')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Hey there! Click the button to see how I can help.", reply_markup=reply_markup)
+    user_id = update.message.from_user.id
+
+    try:
+        member = await context.bot.get_chat_member(ASSOC_CHAT_ID, user_id)
+        if member.status in ['member', 'administrator', 'creator']:
+            keyboard = [
+                [InlineKeyboardButton("Show me", callback_data='home')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                'Hey there! Click the button to see how I can help.', reply_markup=reply_markup)
+        else:
+            await update.message.reply_text(
+                "Sorry but I can only help Halogen Associates! Join us first? Head to"
+                " https://halogen.sg/halogenplus-volunteer/ to sign up!")
+    except Error:
+        await update.message.reply_text(
+            "Sorry there was an error! Are you already a Halogen Associate? If so try again, if not you can head to"
+            " https://halogen.sg/halogenplus-volunteer/ to sign up!")
 
 
 # MAIN BOT FUNCTION
@@ -1859,6 +1975,8 @@ def main():
     application.add_handler(CommandHandler('setrole', set_user_role))
     application.add_handler(CommandHandler('managerisme', manager_home))
     application.add_handler(CommandHandler('seephoto', send_user_photo))
+
+    application.add_handler(MessageHandler(filters.Text(["Head Trainer Options"]), head_trainer_options))
 
     # Add Conversation Handlers (Commands below)
     conv_handler = ConversationHandler(
@@ -1968,7 +2086,8 @@ def main():
     application.add_handler(CallbackQueryHandler(handle_callback_query))
 
     # Add default message handler
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, default_response))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+                                           default_response))
 
     # Start the bot
     application.run_polling()
