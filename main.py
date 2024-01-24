@@ -210,9 +210,10 @@ async def view_personal_profile(update, context):
             query = """
                         SELECT first_name, last_name, date_of_birth, nric_number, 
                                moe_irs, mobile, postal, training_hours 
-                        FROM users
+                        FROM users 
+                        WHERE telegram_id = %s
                     """
-            cursor.execute(query)
+            cursor.execute(query, (chat_id,))
             users = cursor.fetchall()
 
             if not users:
@@ -410,13 +411,18 @@ async def postal_handler(update, context):
     dob_date_a = datetime.strptime(dob_date_str, '%Y-%m-%d')
     formatted_dob_date = dob_date_a.strftime('%d %b %y')  # '04 Jan 23'
 
+    # Converting MOE IRS readable formats
+    irs_date_str = context.user_data['moe_irs']
+    irs_date_a = datetime.strptime(irs_date_str, '%Y-%m-%d')
+    formatted_irs_date = irs_date_a.strftime('%d %b %y')  # '04 Jan 23'
+
     # Assemble a summary of the collected data
     biodata_summary = (
         f"First Name: {context.user_data['first_name']}\n"
         f"Last Name: {context.user_data['last_name']}\n"
         f"DOB: {formatted_dob_date}\n"
         f"NRIC: {context.user_data['nric_number']}\n"
-        f"MOE IRS Expiry: {context.user_data['moe_irs']}\n"
+        f"MOE IRS Expiry: {formatted_irs_date}\n"
         f"Mobile Number: {context.user_data['mobile']}\n"
         f"Postal Code: {context.user_data['postal']}\n"
     )
