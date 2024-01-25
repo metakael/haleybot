@@ -105,6 +105,20 @@ async def handle_callback_query(update, context):
     elif data == 'about':
         # General about text
         await about_bot(update, context)
+    elif data == 'backasklastname':
+        await back_asklastname(update, context)
+    elif data == 'backaskdob':
+        await back_askdob(update, context)
+    elif data == 'backaskphoto':
+        await back_askphoto(update, context)
+    elif data == 'backasknric':
+        await back_asknric(update, context)
+    elif data == 'backaskmoeirs':
+        await back_askmoeirs(update, context)
+    elif data == 'backaskmobile':
+        await back_askmobile(update, context)
+    elif data == 'backaskpostal':
+        await back_askpostal(update, context)
 
 
 # COMMANDS
@@ -346,13 +360,23 @@ def is_user_registered(tele_id):
 
 async def first_name_handler(update, context):
     context.user_data['first_name'] = update.message.text
-    await update.message.reply_text('Great! Now please enter your last name.')
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='register')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Great! Now please enter your last name.', reply_markup=reply_markup)
     return LAST_NAME
 
 
 async def last_name_handler(update, context):
     context.user_data['last_name'] = update.message.text
-    await update.message.reply_text('Got it! Now, please enter your date of birth (DDMMYY).')
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backasklastname')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Got it! Now, please enter your date of birth (DDMMYY).', reply_markup=reply_markup)
     return DATE_OF_BIRTH
 
 
@@ -363,8 +387,14 @@ async def date_of_birth_handler(update, context):
         dob = datetime.strptime(dob_input, '%d%m%y')
         formatted_dob = dob.strftime('%Y-%m-%d')  # Convert to YYYY-MM-DD format
         context.user_data['date_of_birth'] = formatted_dob
+        keyboard = [
+            [InlineKeyboardButton("Back", callback_data='backaskdob')],
+            [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            'Thanks! Please send me a photo of yourself - and just yourself! No group pictures k!')
+            'Thanks! Please send me a photo of yourself - and just yourself! No group pictures k!',
+            reply_markup=reply_markup)
         return PHOTO_UPLOAD
     except ValueError:
         # Inform the user if the format is incorrect and ask them to re-enter the date
@@ -377,8 +407,13 @@ async def photo_handler(update, context):
     file = await context.bot.get_file(photo.file_id)
     photo_binary = await file.download_as_bytearray()
     context.user_data['photo'] = photo_binary
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backaskphoto')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Looking good! Now we will need your NRIC number in full to verify against the MOE"
-                                    " IRS records. Don't worry, I'll keep it safe.")
+                                    " IRS records. Don't worry, I'll keep it safe.", reply_markup=reply_markup)
     return NRIC_NUMBER
 
 
@@ -386,14 +421,19 @@ async def nric_number_handler(update, context):
     user_nric_number = update.message.text
 
     # Define the regex pattern for NRIC
-    pattern1 = r'^[FGSTfgst][0-9]{7}[A-Za-z]$'
+    pattern1 = r'^[FGMSTfgmst][890][0-9]{6}[A-Za-z]$'
 
     # Check if the entered NRIC matches the pattern
     if re.match(pattern1, user_nric_number):
         context.user_data['nric_number'] = user_nric_number
+        keyboard = [
+            [InlineKeyboardButton("Back", callback_data='backasknric')],
+            [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text('What is the expiry date (DDMMYY) of your MOE IRS confirmation? You can search'
                                         ' for sender@rems.moe.edu.sg to find the email. If you are not registered with'
-                                        ' MOE IRS, key in 010101')
+                                        ' MOE IRS, key in 010101', reply_markup=reply_markup)
         return MOE_IRS
     else:
         await update.message.reply_text('Invalid NRIC format. Please enter a valid NRIC number.')
@@ -407,8 +447,13 @@ async def moe_irs_handler(update, context):
         irs = datetime.strptime(irs_input, '%d%m%y')
         formatted_irs = irs.strftime('%Y-%m-%d')  # Convert to YYYY-MM-DD format
         context.user_data['moe_irs'] = formatted_irs
+        keyboard = [
+            [InlineKeyboardButton("Back", callback_data='backaskmoeirs')],
+            [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            'Please enter your mobile number')
+            'Please enter your mobile number', reply_markup=reply_markup)
         return MOBILE
     except ValueError:
         # Inform the user if the format is incorrect and ask them to re-enter the date
@@ -425,7 +470,12 @@ async def mobile_handler(update, context):
     # Check if the entered mobile matches the pattern
     if re.match(pattern2, user_phone_number):
         context.user_data['mobile'] = user_phone_number
-        await update.message.reply_text('Please enter your residential postal code.')
+        keyboard = [
+            [InlineKeyboardButton("Back", callback_data='backaskmobile')],
+            [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text('Please enter your residential postal code.', reply_markup=reply_markup)
         return POSTAL
     else:
         await update.message.reply_text('Invalid format. Please enter a valid mobile number.')
@@ -471,6 +521,7 @@ async def postal_handler(update, context):
     )
 
     keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backaskpostal')],
         [InlineKeyboardButton("Confirm", callback_data='confirm_reg')],
         [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
     ]
@@ -517,6 +568,129 @@ async def handle_reg_cancel(update, context):
     context.user_data.clear()
 
     return ConversationHandler.END  # End the conversation
+
+
+async def back_asklastname(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='register')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    lastname = context.user_data.get('last_name', '')
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please re-enter your last name. This is what you gave me just"
+                                        f" now: {lastname}",
+                                   reply_markup=reply_markup1)
+    return LAST_NAME
+
+
+async def back_askdob(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backasklastname')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    dob = context.user_data.get('date_of_birth', '')
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please re-enter your date of birth (DDMMYY). This is what you gave me just"
+                                        f" now: {dob}",
+                                   reply_markup=reply_markup1)
+    return DATE_OF_BIRTH
+
+
+async def back_askphoto(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backaskdob')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please send me another photo! I'll delete the last one.",
+                                   reply_markup=reply_markup1)
+    return PHOTO_UPLOAD
+
+
+async def back_asknric(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backaskphoto')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    nric = context.user_data.get('nric_number', '')
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please re-enter your NRIC number. This is what you gave me just now: {nric}",
+                                   reply_markup=reply_markup1)
+    return NRIC_NUMBER
+
+
+async def back_askmoeirs(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backasknric')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    moeirs = context.user_data.get('moe_irs', '')
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please re-enter your MOE IRS expiry date (DDMMYY)."
+                                        f" This is what you gave me just now: {moeirs}",
+                                   reply_markup=reply_markup1)
+    return MOE_IRS
+
+
+async def back_askmobile(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backaskmoeirs')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    mobile = context.user_data.get('mobile', '')
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please re-enter your mobile number. This is what you gave me just"
+                                        f" now: {mobile}",
+                                   reply_markup=reply_markup1)
+    return MOBILE
+
+
+async def back_askpostal(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = [
+        [InlineKeyboardButton("Back", callback_data='backaskmobile')],
+        [InlineKeyboardButton("Cancel", callback_data='cancel_reg')],
+    ]
+    reply_markup1 = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_reply_markup(reply_markup=None)
+    postal = context.user_data.get('postal', '')
+    await context.bot.send_message(chat_id=query.message.chat_id,
+                                   text=f"Please re-enter your postal code. This is what you gave me just"
+                                        f" now: {postal}",
+                                   reply_markup=reply_markup1)
+    return POSTAL
 
 
 def store_new_user(user_data):
@@ -991,7 +1165,7 @@ def app_exists(telegram_id, session_id):
                     FROM applications 
                     WHERE telegram_id = %s 
                     AND session = %s 
-                    AND app_status NOT IN ('accepted', 'pending')
+                    AND app_status IN ('accepted', 'pending', 'rejected')
                     """
             cursor.execute(query, (telegram_id, session_id,))
             (count,) = cursor.fetchone()
@@ -1336,7 +1510,7 @@ async def reject_applicants(update, context):
 
     # Update the database and send notifications
     for uid in uids:
-        update_reject_application(bot, chat_id, uid)
+        await update_reject_application(bot, chat_id, uid)
 
     await context.bot.send_message(chat_id=chat_id, text="Applicant(s) have been rejected.")
     # Clear all existing data from context.user_data
@@ -1344,7 +1518,7 @@ async def reject_applicants(update, context):
     return ConversationHandler.END
 
 
-def update_reject_application(bot, chat_id, uid):
+async def update_reject_application(bot, chat_id, uid):
     connection = create_db_connection()
     cursor = None
     if connection is not None:
@@ -1380,7 +1554,7 @@ def update_reject_application(bot, chat_id, uid):
                 message = (f"Hello! For {programme_name} at {school} on {prog_date.strftime('%d-%m-%y')} starting at"
                            f" {formatted_time_e}, the programme is full and you will not be involved. Thanks for"
                            f" signing up and I hope we get to do the next one!")
-                bot.send_message(chat_id=telegram_id, text=message)
+                await bot.send_message(chat_id=telegram_id, text=message)
             else:
                 logging.warning("No matching record found")
 
@@ -1982,7 +2156,11 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(register, pattern='^register$')],
         states={
-            FIRST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, first_name_handler)],
+            FIRST_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, first_name_handler),
+                CallbackQueryHandler(register, pattern='^register$'),
+                CallbackQueryHandler(handle_reg_cancel, pattern='^cancel_reg$')
+            ],
             LAST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, last_name_handler)],
             DATE_OF_BIRTH: [MessageHandler(filters.TEXT & ~filters.COMMAND, date_of_birth_handler)],
             PHOTO_UPLOAD: [MessageHandler(filters.PHOTO, photo_handler)],
