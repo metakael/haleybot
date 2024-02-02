@@ -9,7 +9,7 @@ from telegram.ext import (Application, CommandHandler, MessageHandler, Conversat
 from datetime import datetime, timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Bot, ReplyKeyboardMarkup
 
-# Third commit
+# 6th commit
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -53,7 +53,7 @@ def create_db_connection():
 # CALLBACK QUERY
 async def handle_callback_query(update, context):
     query = update.callback_query
-    await query.answer()
+    await query.answer("Processing...")
     # Retrieve the callback data
     data = query.data
 
@@ -123,10 +123,14 @@ async def handle_callback_query(update, context):
 
 # COMMANDS
 async def start(update, context):
-    user_id = update.message.from_user.id
+    tele_id = update.message.from_user.id
+
+    # Verify if the user is registered
+    if is_user_registered(tele_id):
+        await update.message.reply_text("You are already registered.")
 
     try:
-        member = await context.bot.get_chat_member(ASSOC_CHAT_ID, user_id)
+        member = await context.bot.get_chat_member(ASSOC_CHAT_ID, tele_id)
         if member.status in ['member', 'administrator', 'creator']:
             await update.message.reply_text("Hello! I am Haley, thanks for joining us!")
             keyboard = [
@@ -962,20 +966,18 @@ async def list_jobs(update, context):
 
     await query.edit_message_reply_markup(reply_markup=None)
     await context.bot.send_message(chat_id=query.message.chat_id,
-                                   text="I can show you all programmes within a 7-day period. Please let me know what"
-                                        " is the first day to list from in DDMMYY format..")
+                                   text="I can show you all programmes within a given month."
+                                        " What month do you want to view?")
     return SELECT_DATE
 
 
 async def select_date(update, context):
-    input_date = update.message.text
-    try:
-        # Convert DDMMYY to YYYY-MM-DD
-        start_date = datetime.strptime(input_date, "%d%m%y")
-        mysql_start_date = start_date.strftime("%Y-%m-%d")
+    input_month = update.message.text  # User inputs month abbreviation
+    start_date, end_date = process_month_input(input_month)
 
-        # Calculate the end date (7 days from the start date)
-        end_date = start_date + timedelta(days=7)
+    if start_date and end_date:
+        # Convert start_date and end_date to strings in the format YYYY-MM-DD
+        mysql_start_date = start_date.strftime("%Y-%m-%d")
         mysql_end_date = end_date.strftime("%Y-%m-%d")
 
         # Fetch jobs from the database
@@ -988,9 +990,63 @@ async def select_date(update, context):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(message_select_date, reply_markup=reply_markup)
         return ConversationHandler.END
-    except ValueError:
-        await update.message.reply_text("Invalid date format. Please use DDMMYY.")
+    else:
+        await update.message.reply_text("Invalid month format. Please enter the month in 3 letters or spell it out.")
         return SELECT_DATE
+
+
+def process_month_input(input_month):
+    # Get today's date
+    today = datetime.today()
+    current_year = today.year
+    current_month = today.month
+
+    # Dictionary to convert month abbreviation to month number
+    months = {
+        "jan": 1, "january": 1,
+        "feb": 2, "february": 2,
+        "mar": 3, "march": 3,
+        "apr": 4, "april": 4,
+        "may": 5,
+        "jun": 6, "june": 6,
+        "jul": 7, "july": 7,
+        "aug": 8, "august": 8,
+        "sep": 9, "september": 9,
+        "oct": 10, "october": 10,
+        "nov": 11, "november": 11,
+        "dec": 12, "december": 12
+    }
+
+    # Convert input month to month number
+    month_number = months.get(input_month.lower(), None)
+
+    # If invalid month abbreviation is given
+    if not month_number:
+        return None, None
+
+    # Determine the correct year for the input month
+    if month_number < current_month:
+        # If the input month is before the current month, use the next year
+        year = current_year + 1
+    else:
+        # If the input month is the current month or after, use the current year
+        year = current_year
+
+    # Get the first day of the input month
+    if month_number == current_month:
+        start_date = today
+    else:
+        start_date = datetime(year, month_number, 1)
+
+    # Calculate the last day of the input month
+    if month_number == 12:
+        # If the input month is December, the next month is January of the next year
+        end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        # For other months, just get the first day of the next month and subtract one day
+        end_date = datetime(year, month_number + 1, 1) - timedelta(days=1)
+
+    return start_date, end_date
 
 
 def fetch_jobs(start_date, end_date):
@@ -1001,7 +1057,7 @@ def fetch_jobs(start_date, end_date):
             cursor = connection.cursor()
             query = """
             SELECT session_id, programme_name, school, prog_date, start_time, hours FROM jobs 
-            WHERE prog_date BETWEEN %s AND %s AND trainers_needed > 0
+            WHERE prog_date BETWEEN %s AND %s AND trainers_needed > 0 AND job_status = 'incomplete'
             """
             cursor.execute(query, (start_date, end_date))
             jobs = cursor.fetchall()
@@ -1058,7 +1114,8 @@ async def apply_job(update, context):
 
     # Check if the job exists and if the user has already applied
     if not job_exists(session_id):
-        await update.message.reply_text("This ID is invalid. Please enter a valid programme ID number.")
+        await update.message.reply_text("This ID is either invalid or belongs to an old programme."
+                                        " Please enter a valid programme ID number.")
         return APPLY_JOB
 
     # Show job details for user to confirm
@@ -1077,7 +1134,12 @@ def job_exists(session_id):
     if connection is not None:
         try:
             cursor = connection.cursor()
-            cursor.execute("SELECT COUNT(*) FROM jobs WHERE session_id = %s", (session_id,))
+            query = """
+            SELECT COUNT(*) 
+            FROM jobs 
+            WHERE session_id = %s AND job_status = 'incomplete'
+            """
+            cursor.execute(query, (session_id,))
             (count,) = cursor.fetchone()
             return count > 0
         except Error as e:
@@ -1098,8 +1160,9 @@ def fetch_one_job(session_id):
         try:
             cursor = connection.cursor()
             query = """
-            SELECT programme_name, school, prog_date, start_time, hours FROM jobs 
-            WHERE session_id = %s
+            SELECT programme_name, school, prog_date, start_time, hours 
+            FROM jobs 
+            WHERE session_id = %s AND job_status = 'incomplete'
             """
             cursor.execute(query, (session_id,))
             job = cursor.fetchone()
@@ -1112,7 +1175,7 @@ def fetch_one_job(session_id):
                 if isinstance(start_time, timedelta) \
                 else str(start_time)
             message_fetch_job = (f"Programme: {programme}\nSchool: {school}\nDate:"
-                                 f" {prog_date.strftime('%d-%m-%y')}\nTime: {formatted_time_c}\nHours: {hours}\n")
+                                 f" {prog_date.strftime('%d %b %y')}\nTime: {formatted_time_c}\nHours: {hours}\n")
             return message_fetch_job
         except Error as e:
             return "Error retrieving programme details.", e
@@ -1443,7 +1506,7 @@ async def update_accept_application(bot, chat_id, uid):
                     if isinstance(start_time, timedelta) \
                     else str(start_time)
                 message = (f"Good news! You have been confirmed for {programme_name} at {school} on"
-                           f" {prog_date.strftime('%d-%m-%y')} starting at {formatted_time_f} for {hours} hours."
+                           f" {prog_date.strftime('%d %b %y')} starting at {formatted_time_f} for {hours} hours."
                            f" Please click the link to join the programme chat group:\n{join_link}")
                 await bot.send_message(chat_id=telegram_id, text=message)
             else:
@@ -1551,9 +1614,9 @@ async def update_reject_application(bot, chat_id, uid):
                 formatted_time_e = (datetime.min + start_time).strftime('%I:%M %p') \
                     if isinstance(start_time, timedelta) \
                     else str(start_time)
-                message = (f"Hello! For {programme_name} at {school} on {prog_date.strftime('%d-%m-%y')} starting at"
-                           f" {formatted_time_e}, the programme is full and you will not be involved. Thanks for"
-                           f" signing up and I hope we get to do the next one!")
+                message = (f"Hello! You have been released from {programme_name} at {school} on"
+                           f" {prog_date.strftime('%d %b %y')} starting at {formatted_time_e}."
+                           f" Thanks for signing up and I hope we get to do the next one!")
                 await bot.send_message(chat_id=telegram_id, text=message)
             else:
                 logging.warning("No matching record found")
